@@ -1,0 +1,214 @@
+/**
+ * App — root component of the Markdown editor.
+ *
+ * Manages global state (file state, editor mode, saving) and wires together
+ * the TitleBar, Toolbar, Editor, Preview, and StatusBar.
+ */
+
+import { useState, useRef, useCallback, useEffect } from 'react';
+import TitleBar from './components/TitleBar';
+import Toolbar from './components/Toolbar';
+import Editor from './components/Editor';
+import Preview from './components/Preview';
+import StatusBar from './components/StatusBar';
+import { useFileSystem } from './hooks/useFileSystem';
+import type { EditorMode, FileState } from './types';
+import { countStats, WELCOME_CONTENT } from './utils/markdown';
+
+function App() {
+  const [fileState, setFileState] = useState<FileState>({
+    name: 'untitled.md',
+    content: WELCOME_CONTENT,
+    isDirty: false,
+    fileHandle: null,
+  });
+  const [mode, setMode] = useState<EditorMode>('split');
+  const [isSaving, setIsSaving] = useState(false);
+
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const { openFile, saveFile, saveFileAs, isSupported } = useFileSystem();
+
+  const stats = countStats(fileState.content);
+
+  /* ---------- Content change ---------- */
+  const handleContentChange = useCallback((content: string) => {
+    setFileState((prev) => ({ ...prev, content, isDirty: true }));
+  }, []);
+
+  /* ---------- New file ---------- */
+  const handleNew = useCallback(() => {
+    setFileState((prev) => {
+      if (prev.isDirty) {
+        const confirmed = window.confirm(
+          '当前文件有未保存的更改，确定要新建文件吗？'
+        );
+        if (!confirmed) return prev;
+      }
+      return { name: 'untitled.md', content: '', isDirty: false, fileHandle: null };
+    });
+  }, []);
+
+  /* ---------- Open file ---------- */
+  const handleOpen = useCallback(async () => {
+    if (fileState.isDirty) {
+      const confirmed = window.confirm(
+        '当前文件有未保存的更改，确定要打开新文件吗？'
+      );
+      if (!confirmed) return;
+    }
+    const result = await openFile();
+    if (result) {
+      setFileState({
+        name: result.name,
+        content: result.content,
+        isDirty: false,
+        fileHandle: result.handle,
+      });
+    }
+  }, [fileState.isDirty, openFile]);
+
+  /* ---------- Save ---------- */
+  const handleSave = useCallback(async () => {
+    setIsSaving(true);
+    try {
+      const handle = await saveFile(
+        fileState.content,
+        fileState.name,
+        fileState.fileHandle
+      );
+      setFileState((prev) => ({
+        ...prev,
+        isDirty: false,
+        fileHandle: handle || prev.fileHandle,
+      }));
+    } catch (err) {
+      console.error('保存失败:', err);
+      window.alert('保存失败，请重试。');
+    } finally {
+      setIsSaving(false);
+    }
+  }, [fileState.content, fileState.name, fileState.fileHandle, saveFile]);
+
+  /* ---------- Save As ---------- */
+  const handleSaveAs = useCallback(async () => {
+    setIsSaving(true);
+    try {
+      const handle = await saveFileAs(fileState.content, fileState.name);
+      if (handle) {
+        const newName = handle.name || fileState.name;
+        setFileState((prev) => ({
+          ...prev,
+          name: newName,
+          isDirty: false,
+          fileHandle: handle,
+        }));
+      }
+    } catch (err) {
+      console.error('另存为失败:', err);
+      window.alert('另存为失败，请重试。');
+    } finally {
+      setIsSaving(false);
+    }
+  }, [fileState.content, fileState.name, saveFileAs]);
+
+  /* ---------- Keyboard shortcuts ---------- */
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const isMod = e.ctrlKey || e.metaKey;
+
+      if (isMod && (e.key === 's' || e.key === 'S')) {
+        e.preventDefault();
+        if (e.shiftKey) {
+          handleSaveAs();
+        } else {
+          handleSave();
+        }
+      } else if (isMod && (e.key === 'n' || e.key === 'N')) {
+        e.preventDefault();
+        handleNew();
+      } else if (isMod && (e.key === 'o' || e.key === 'O')) {
+        e.preventDefault();
+        handleOpen();
+      }
+    };
+
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [handleSave, handleSaveAs, handleNew, handleOpen]);
+
+  /* ---------- Warn before closing with unsaved changes ---------- */
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (fileState.isDirty) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [fileState.isDirty]);
+
+  /* ---------- Render ---------- */
+  const showEditor = mode === 'edit' || mode === 'split';
+  const showPreview = mode === 'preview' || mode === 'split';
+
+  return (
+    <div className="flex flex-col h-screen bg-gray-50">
+      <TitleBar
+        fileName={fileState.name}
+        isDirty={fileState.isDirty}
+        isSaving={isSaving}
+        onNew={handleNew}
+        onOpen={handleOpen}
+        onSave={handleSave}
+        onSaveAs={handleSaveAs}
+        mode={mode}
+        onModeChange={setMode}
+      />
+      <Toolbar
+        textareaRef={textareaRef}
+        onContentChange={handleContentChange}
+      />
+      <main className="flex-1 flex overflow-hidden">
+        {showEditor && (
+          <div
+            className={
+              mode === 'split'
+                ? 'w-1/2 border-r border-gray-200 overflow-hidden'
+                : 'w-full overflow-hidden'
+            }
+          >
+            <Editor
+              textareaRef={textareaRef}
+              value={fileState.content}
+              onChange={handleContentChange}
+            />
+          </div>
+        )}
+        {showPreview && (
+          <div
+            className={
+              mode === 'split' ? 'w-1/2 overflow-hidden' : 'w-full overflow-hidden'
+            }
+          >
+            <Preview content={fileState.content} />
+          </div>
+        )}
+      </main>
+      <StatusBar
+        fileName={fileState.name}
+        isDirty={fileState.isDirty}
+        isSaving={isSaving}
+        stats={stats}
+        mode={mode}
+      />
+      {!isSupported && (
+        <div className="px-4 py-1 bg-yellow-50 border-t border-yellow-200 text-xs text-yellow-700 text-center">
+          当前浏览器不支持 File System Access API，文件操作将通过下载/上传方式进行。推荐使用 Chrome 或 Edge 浏览器。
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default App;
