@@ -39,12 +39,6 @@ npm run preview
 
 ## 📦 部署
 
-项目已配置 GitHub Actions 自动部署到 GitHub Pages。
-
-1. 进入仓库 Settings → Pages
-2. Source 选择 **GitHub Actions**
-3. 推送代码后自动构建部署
-
 访问地址：`https://057300.xyz/lite_MD_editor/`
 
 ## 📄 License
