@@ -1,8 +1,16 @@
 # Lite MD Editor
 
+**[简体中文](#简体中文)** | **[English](#english)**
+
+---
+
+<a id="简体中文"></a>
+
+## 简体中文
+
 轻量化 Markdown 编辑器 — 像 Word 一样编辑和阅读 MD 文件，纯本地运行，无需登录和联网。
 
-## ✨ 功能特性
+### ✨ 功能特性
 
 - **📝 Markdown 编辑**：完整语法支持，代码块语法高亮（Prism）
 - **👁️ 实时预览**：支持 GitHub Flavored Markdown（表格、任务列表、删除线等）
@@ -13,7 +21,7 @@
 - **📊 状态栏**：文件名、保存状态、字数统计（中英文混合计数）
 - **🚫 纯本地运行**：无后端、无登录、无网络请求
 
-## 🚀 快速开始
+### 🚀 快速开始
 
 ```bash
 # 安装依赖
@@ -29,7 +37,7 @@ npm run build
 npm run preview
 ```
 
-## 🛠️ 技术栈
+### 🛠️ 技术栈
 
 - Vite + React 18 + TypeScript
 - Tailwind CSS
@@ -37,7 +45,7 @@ npm run preview
 - react-syntax-highlighter (Prism)
 - lucide-react
 
-## 📦 部署
+### 📦 部署
 
 项目已配置 GitHub Actions 自动部署到 GitHub Pages。
 
@@ -47,6 +55,63 @@ npm run preview
 
 访问地址：`https://bbb-pro.github.io/lite_MD_editor/`
 
-## 📄 License
+### 📄 License
+
+MIT
+
+---
+
+<a id="english"></a>
+
+## English
+
+A lightweight Markdown editor — edit and read MD files like Word, fully local, no login or internet required.
+
+### ✨ Features
+
+- **📝 Markdown Editing**: Full syntax support with code block syntax highlighting (Prism)
+- **👁️ Live Preview**: GitHub Flavored Markdown support (tables, task lists, strikethrough, etc.)
+- **🔀 Three Modes**: Edit mode / Split mode (default) / Preview mode
+- **🗂️ File Operations**: New, Open, Save, Save As (native file picker on Chrome/Edge)
+- **🎨 Word-Style Toolbar**: Headings, bold, italic, strikethrough, inline code, lists, blockquote, link, image, code block, table, horizontal rule
+- **⌨️ Keyboard Shortcuts**: Ctrl+S/N/O/Shift+S/B/I
+- **📊 Status Bar**: File name, save status, word count (CJK aware)
+- **🚫 Fully Local**: No backend, no login, no network requests
+
+### 🚀 Quick Start
+
+```bash
+# Install dependencies
+npm install
+
+# Start dev server
+npm run dev
+
+# Build for production
+npm run build
+
+# Preview build output
+npm run preview
+```
+
+### 🛠️ Tech Stack
+
+- Vite + React 18 + TypeScript
+- Tailwind CSS
+- react-markdown + remark-gfm
+- react-syntax-highlighter (Prism)
+- lucide-react
+
+### 📦 Deployment
+
+The project is configured with GitHub Actions for automatic deployment to GitHub Pages.
+
+1. Go to repository Settings → Pages
+2. Set Source to **GitHub Actions**
+3. Push to main branch to trigger auto-deploy
+
+Live URL: `https://bbb-pro.github.io/lite_MD_editor/`
+
+### 📄 License
 
 MIT
