@@ -45,7 +45,7 @@ npm run preview
 2. Source 选择 **GitHub Actions**
 3. 推送代码后自动构建部署
 
-访问地址：`https://bbb-pro.github.io/lite_MD_editor/`
+访问地址：`https://057300.xyz/lite_MD_editor/`
 
 ## 📄 License
 
