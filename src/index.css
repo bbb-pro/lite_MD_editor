@@ -257,3 +257,104 @@ body {
   border-radius: 0.25rem;
   box-shadow: 0 1px 0 #d1d5db;
 }
+
+/* ===== Code blocks (lightweight CSS-based styling) ===== */
+.md-code-block {
+  position: relative;
+  margin: 0.5rem 0;
+  padding: 1rem 1.25rem;
+  background: #1e293b;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.md-code-block code {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  color: #e2e8f0;
+  background: none;
+  padding: 0;
+  white-space: pre;
+}
+
+.md-code-lang {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.7rem;
+  font-family: 'JetBrains Mono', monospace;
+  color: #94a3b8;
+  background: rgba(255, 255, 255, 0.08);
+  border-bottom-left-radius: 0.5rem;
+  border-top-right-radius: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.md-code-inline {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 0.85em;
+  padding: 0.15rem 0.4rem;
+  background: #f1f5f9;
+  border-radius: 0.25rem;
+  color: #db2777;
+}
+
+/* ===== Print / PDF Export ===== */
+@media print {
+  /* Hide all elements by default */
+  body * {
+    visibility: hidden;
+  }
+
+  /* Show only the markdown preview and its children */
+  .markdown-preview,
+  .markdown-preview * {
+    visibility: visible;
+  }
+
+  /* Position preview at the top-left, full width */
+  .markdown-preview {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    max-width: none;
+    padding: 2rem 3rem;
+    background: white !important;
+  }
+
+  /* Reset overflow for printing */
+  .markdown-preview {
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  /* Ensure code blocks don't break across pages */
+  .markdown-preview pre {
+    white-space: pre-wrap;
+    word-break: break-word;
+    page-break-inside: avoid;
+  }
+
+  /* Avoid page breaks inside headings and images */
+  .markdown-preview h1,
+  .markdown-preview h2,
+  .markdown-preview h3,
+  .markdown-preview img {
+    page-break-inside: avoid;
+  }
+
+  /* Force background colors to print */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Hide scrollbars in print */
+  ::-webkit-scrollbar {
+    display: none;
+  }
+}

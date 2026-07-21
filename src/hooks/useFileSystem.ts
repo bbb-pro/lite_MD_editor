@@ -35,17 +35,33 @@ export interface UseFileSystemReturn {
   saveFileAs: (content: string, name: string) => Promise<any | null>;
 }
 
+/** Check if running inside Electron */
+function isElectron(): boolean {
+  return typeof window !== 'undefined' && !!(window as any).electronAPI?.isElectron;
+}
+
 export function useFileSystem(): UseFileSystemReturn {
   const isSupported = useMemo(
     () =>
-      typeof window !== 'undefined' &&
-      'showOpenFilePicker' in window &&
-      'showSaveFilePicker' in window,
+      isElectron() ||
+      (typeof window !== 'undefined' &&
+        'showOpenFilePicker' in window &&
+        'showSaveFilePicker' in window),
     []
   );
 
   const openFile = useCallback(async (): Promise<OpenFileResult | null> => {
-    if (isSupported) {
+    // Electron native dialog
+    if (isElectron()) {
+      const result = await (window as any).electronAPI.openFile();
+      if (result) {
+        return { name: result.name, content: result.content, handle: result.path };
+      }
+      return null;
+    }
+
+    // File System Access API (Chrome / Edge)
+    if (typeof window !== 'undefined' && 'showOpenFilePicker' in window) {
       try {
         const [handle] = await (window as any).showOpenFilePicker({
           types: MD_FILE_TYPES,
@@ -79,7 +95,7 @@ export function useFileSystem(): UseFileSystemReturn {
       document.body.appendChild(input);
       input.click();
     });
-  }, [isSupported]);
+  }, []);
 
   const _downloadFile = (content: string, name: string): void => {
     const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
@@ -96,7 +112,20 @@ export function useFileSystem(): UseFileSystemReturn {
 
   const saveFileAs = useCallback(
     async (content: string, name: string): Promise<any | null> => {
-      if (isSupported) {
+      // Electron native dialog
+      if (isElectron()) {
+        const result = await (window as any).electronAPI.saveFile({
+          content,
+          defaultName: name.endsWith('.md') ? name : name + '.md',
+        });
+        if (result) {
+          return result.path; // store file path as "handle"
+        }
+        return null;
+      }
+
+      // File System Access API (Chrome / Edge)
+      if (typeof window !== 'undefined' && 'showSaveFilePicker' in window) {
         try {
           const newHandle = await (window as any).showSaveFilePicker({
             suggestedName: name.endsWith('.md') ? name : name + '.md',
@@ -116,12 +145,30 @@ export function useFileSystem(): UseFileSystemReturn {
       _downloadFile(content, name);
       return null;
     },
-    [isSupported]
+    []
   );
 
   const saveFile = useCallback(
     async (content: string, name: string, handle: any | null): Promise<any | null> => {
-      if (handle) {
+      // Electron: if we have a file path, write directly to it
+      if (isElectron()) {
+        if (handle && typeof handle === 'string') {
+          const result = await (window as any).electronAPI.saveFileToPath({
+            content,
+            filePath: handle,
+          });
+          if (result?.success) {
+            return handle;
+          }
+          console.error('Failed to save to path:', result?.error);
+          return null;
+        }
+        // No path yet — show save-as dialog
+        return saveFileAs(content, name);
+      }
+
+      // File System Access API: write to existing handle
+      if (handle && typeof handle === 'object' && handle.createWritable) {
         try {
           const writable = await handle.createWritable();
           await writable.write(content);

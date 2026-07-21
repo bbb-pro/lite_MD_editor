@@ -33,3 +33,40 @@ export interface OpenFileResult {
   content: string;
   handle: any | null;
 }
+
+/* ---------- Electron API (injected by preload script) ---------- */
+
+export interface ElectronFileResult {
+  name?: string;
+  path?: string;
+  content?: string;
+  success?: boolean;
+  error?: string;
+}
+
+export interface ElectronPDFResult {
+  success?: boolean;
+  cancelled?: boolean;
+  path?: string;
+  error?: string;
+}
+
+export interface ElectronAPI {
+  isElectron: boolean;
+  platform: string;
+  openFile: () => Promise<ElectronFileResult | null>;
+  saveFile: (data: { content: string; defaultName: string }) => Promise<ElectronFileResult | null>;
+  saveFileToPath: (data: { content: string; filePath: string }) => Promise<ElectronFileResult | null>;
+  exportPDF: (data: { defaultName: string }) => Promise<ElectronPDFResult>;
+  onMenuNew: (callback: () => void) => void;
+  onMenuOpen: (callback: () => void) => void;
+  onMenuSave: (callback: () => void) => void;
+  onMenuSaveAs: (callback: () => void) => void;
+  onMenuExportPDF: (callback: () => void) => void;
+}
+
+declare global {
+  interface Window {
+    electronAPI?: ElectronAPI;
+  }
+}

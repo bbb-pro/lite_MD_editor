@@ -29,6 +29,10 @@ pnpm-debug.log*
 .env.local
 .env.*.local
 
+# Electron build output
+release/
+
 # Misc
 .cache/
 .temp/
+*.timestamp-*.mjs

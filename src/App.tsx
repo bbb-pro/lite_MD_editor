@@ -24,6 +24,7 @@ function App() {
   });
   const [mode, setMode] = useState<EditorMode>('split');
   const [isSaving, setIsSaving] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { openFile, saveFile, saveFileAs, isSupported } = useFileSystem();
@@ -111,6 +112,39 @@ function App() {
     }
   }, [fileState.content, fileState.name, saveFileAs]);
 
+  /* ---------- Export PDF ---------- */
+  const handleExportPDF = useCallback(async () => {
+    setIsExporting(true);
+    const prevMode = mode;
+    // Switch to preview mode so the full rendered content is visible
+    setMode('preview');
+
+    try {
+      // Wait for React to re-render the preview at full width
+      await new Promise((r) => setTimeout(r, 200));
+
+      const electronAPI = (window as any).electronAPI;
+      if (electronAPI?.isElectron) {
+        // Electron: use native printToPDF
+        const result = await electronAPI.exportPDF({ defaultName: fileState.name });
+        if (result?.success) {
+          // Success — no alert needed, user sees the save dialog
+        } else if (result?.error) {
+          window.alert('导出 PDF 失败: ' + result.error);
+        }
+      } else {
+        // Web: use browser's print dialog (user can "Save as PDF")
+        window.print();
+      }
+    } catch (err) {
+      console.error('导出 PDF 失败:', err);
+      window.alert('导出 PDF 失败，请重试。');
+    } finally {
+      setMode(prevMode);
+      setIsExporting(false);
+    }
+  }, [mode, fileState.name]);
+
   /* ---------- Keyboard shortcuts ---------- */
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -129,12 +163,15 @@ function App() {
       } else if (isMod && (e.key === 'o' || e.key === 'O')) {
         e.preventDefault();
         handleOpen();
+      } else if (isMod && (e.key === 'e' || e.key === 'E')) {
+        e.preventDefault();
+        handleExportPDF();
       }
     };
 
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [handleSave, handleSaveAs, handleNew, handleOpen]);
+  }, [handleSave, handleSaveAs, handleNew, handleOpen, handleExportPDF]);
 
   /* ---------- Warn before closing with unsaved changes ---------- */
   useEffect(() => {
@@ -148,6 +185,24 @@ function App() {
     return () => window.removeEventListener('beforeunload', handler);
   }, [fileState.isDirty]);
 
+  /* ---------- Electron menu event listeners ---------- */
+  useEffect(() => {
+    const electronAPI = (window as any).electronAPI;
+    if (!electronAPI?.isElectron) return;
+
+    const offNew = electronAPI.onMenuNew(() => handleNew());
+    const offOpen = electronAPI.onMenuOpen(() => handleOpen());
+    const offSave = electronAPI.onMenuSave(() => handleSave());
+    const offSaveAs = electronAPI.onMenuSaveAs(() => handleSaveAs());
+    const offExportPDF = electronAPI.onMenuExportPDF(() => handleExportPDF());
+
+    return () => {
+      // ipcRenderer.on returns a cleanup function in newer Electron,
+      // but our preload doesn't return disposers — just leave listeners.
+      // They'll be cleaned up when the window is destroyed.
+    };
+  }, [handleNew, handleOpen, handleSave, handleSaveAs, handleExportPDF]);
+
   /* ---------- Render ---------- */
   const showEditor = mode === 'edit' || mode === 'split';
   const showPreview = mode === 'preview' || mode === 'split';
@@ -158,10 +213,12 @@ function App() {
         fileName={fileState.name}
         isDirty={fileState.isDirty}
         isSaving={isSaving}
+        isExporting={isExporting}
         onNew={handleNew}
         onOpen={handleOpen}
         onSave={handleSave}
         onSaveAs={handleSaveAs}
+        onExportPDF={handleExportPDF}
         mode={mode}
         onModeChange={setMode}
       />

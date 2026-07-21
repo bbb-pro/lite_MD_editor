@@ -11,6 +11,7 @@ import {
   Eye,
   Columns2,
   FileText,
+  FileType,
 } from 'lucide-react';
 import type { EditorMode } from '../types';
 
@@ -18,10 +19,12 @@ export interface TitleBarProps {
   fileName: string;
   isDirty: boolean;
   isSaving: boolean;
+  isExporting: boolean;
   onNew: () => void;
   onOpen: () => void;
   onSave: () => void;
   onSaveAs: () => void;
+  onExportPDF: () => void;
   mode: EditorMode;
   onModeChange: (mode: EditorMode) => void;
 }
@@ -36,10 +39,12 @@ export default function TitleBar({
   fileName,
   isDirty,
   isSaving,
+  isExporting,
   onNew,
   onOpen,
   onSave,
   onSaveAs,
+  onExportPDF,
   mode,
   onModeChange,
 }: TitleBarProps) {
@@ -86,6 +91,14 @@ export default function TitleBar({
           className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-sm text-gray-600 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Download size={17} />
+        </button>
+        <button
+          onClick={onExportPDF}
+          disabled={isExporting}
+          title="导出 PDF (Ctrl+E)"
+          className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-sm text-gray-600 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <FileType size={17} className={isExporting ? 'animate-pulse' : ''} />
         </button>
 
         {/* Divider */}

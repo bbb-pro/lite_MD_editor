@@ -1,13 +1,13 @@
 /**
- * Preview — renders Markdown content with GFM support and syntax highlighting.
+ * Preview — renders Markdown content with GFM support.
+ *
+ * Uses CSS-styled code blocks instead of react-syntax-highlighter to keep
+ * the bundle lightweight and avoid build OOM issues.
  */
 
 import { memo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-// @ts-ignore — style file has no bundled type definitions
-import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 export interface PreviewProps {
   content: string;
@@ -20,35 +20,28 @@ function PreviewInner({ content }: PreviewProps) {
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
           components={{
-            // Render <pre> as a fragment so SyntaxHighlighter's own wrapper
-            // becomes the block-level container (avoids nested <pre>).
-            pre: ({ children }) => <>{children}</>,
+            // Code blocks: dark themed <pre> with language label
             code: ({ className, children, ...props }: any) => {
               const match = /language-(\w+)/.exec(className || '');
               const text = String(children);
               const isBlock = !!match || text.includes('\n');
 
               if (isBlock) {
+                const lang = match ? match[1] : 'text';
                 return (
-                  <SyntaxHighlighter
-                    language={match ? match[1] : 'text'}
-                    style={oneDark}
-                    PreTag="div"
-                    customStyle={{
-                      margin: '0.5rem 0',
-                      borderRadius: '0.5rem',
-                      fontSize: '0.875rem',
-                      padding: '1rem',
-                    }}
-                    {...props}
-                  >
-                    {text.replace(/\n$/, '')}
-                  </SyntaxHighlighter>
+                  <pre className="md-code-block" data-lang={lang}>
+                    {match && (
+                      <span className="md-code-lang">{lang}</span>
+                    )}
+                    <code className={className} {...props}>
+                      {text.replace(/\n$/, '')}
+                    </code>
+                  </pre>
                 );
               }
 
               return (
-                <code className={className} {...props}>
+                <code className="md-code-inline" {...props}>
                   {children}
                 </code>
               );
@@ -59,9 +52,7 @@ function PreviewInner({ content }: PreviewProps) {
                 {children}
               </a>
             ),
-            // Strip the disabled attribute from task list checkboxes so they
-            // are at least visually interactive (read-only though — we don't
-            // sync clicks back to the editor).
+            // Task list checkboxes
             input: ({ type, ...props }: any) => {
               if (type === 'checkbox') {
                 return <input type="checkbox" {...props} />;
