@@ -98,13 +98,7 @@ npm run preview
 
 ### 📦 Deployment
 
-The project is configured with GitHub Actions for automatic deployment to GitHub Pages.
-
-1. Go to repository Settings → Pages
-2. Set Source to **GitHub Actions**
-3. Push to main branch to trigger auto-deploy
-
-Live URL: `https://bbb-pro.github.io/lite_MD_editor/`
+Live URL: 'https://057300.xyz/lite_MD_editor/'
 
 ### 📄 License
 
