@@ -1,4 +1,4 @@
-# Lite MD Editor
+# Lite online Markdown Editor
 
 **[简体中文](#简体中文)** | **[English](#english)**
 
