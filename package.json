@@ -12,7 +12,7 @@
     "typecheck": "tsc --noEmit",
     "electron:dev": "concurrently \"vite\" \"wait-on tcp:5173 && cross-env NODE_ENV=development electron electron/main.cjs\"",
     "electron:build": "npm run build:electron && electron-builder",
-    "dist": "npm run build:electron && electron-builder --win"
+    "dist": "npm run build:electron && electron-builder --win && powershell -File scripts/package-portable.ps1"
   },
   "dependencies": {
     "lucide-react": "^0.408.0",
