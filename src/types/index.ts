@@ -41,7 +41,15 @@ export interface ElectronFileResult {
   path?: string;
   content?: string;
   success?: boolean;
+  /** True when the user dismissed the native dialog. */
+  cancelled?: boolean;
   error?: string;
+}
+
+/** Save-dialog file filter passed to Electron. */
+export interface ElectronSaveFilter {
+  name: string;
+  extensions: string[];
 }
 
 export interface ElectronPDFResult {
@@ -58,11 +66,22 @@ export interface ElectronAPI {
   saveFile: (data: { content: string; defaultName: string }) => Promise<ElectronFileResult | null>;
   saveFileToPath: (data: { content: string; filePath: string }) => Promise<ElectronFileResult | null>;
   exportPDF: (data: { defaultName: string }) => Promise<ElectronPDFResult>;
+  /**
+   * Write an arbitrary text document (HTML / Word) to disk through the native
+   * save dialog. Added for the "导出 HTML" / "导出 Word" features.
+   */
+  exportDocument: (data: {
+    content: string;
+    defaultName: string;
+    filters?: ElectronSaveFilter[];
+  }) => Promise<ElectronFileResult | null>;
   onMenuNew: (callback: () => void) => void;
   onMenuOpen: (callback: () => void) => void;
   onMenuSave: (callback: () => void) => void;
   onMenuSaveAs: (callback: () => void) => void;
   onMenuExportPDF: (callback: () => void) => void;
+  onMenuExportHtml: (callback: () => void) => void;
+  onMenuExportWord: (callback: () => void) => void;
 }
 
 declare global {

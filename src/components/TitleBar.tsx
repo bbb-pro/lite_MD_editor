@@ -12,6 +12,8 @@ import {
   Columns2,
   FileText,
   FileType,
+  FileCode,
+  FileType2,
 } from 'lucide-react';
 import type { EditorMode } from '../types';
 
@@ -20,11 +22,19 @@ export interface TitleBarProps {
   isDirty: boolean;
   isSaving: boolean;
   isExporting: boolean;
+  /** Whether an HTML export is currently in progress. */
+  isExportingHtml?: boolean;
+  /** Whether a Word export is currently in progress. */
+  isExportingWord?: boolean;
   onNew: () => void;
   onOpen: () => void;
   onSave: () => void;
   onSaveAs: () => void;
   onExportPDF: () => void;
+  /** Export the rendered preview as a standalone .html file. */
+  onExportHtml: () => void;
+  /** Export the rendered preview as a Word-readable .doc file. */
+  onExportWord: () => void;
   mode: EditorMode;
   onModeChange: (mode: EditorMode) => void;
 }
@@ -40,11 +50,15 @@ export default function TitleBar({
   isDirty,
   isSaving,
   isExporting,
+  isExportingHtml = false,
+  isExportingWord = false,
   onNew,
   onOpen,
   onSave,
   onSaveAs,
   onExportPDF,
+  onExportHtml,
+  onExportWord,
   mode,
   onModeChange,
 }: TitleBarProps) {
@@ -99,6 +113,22 @@ export default function TitleBar({
           className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-sm text-gray-600 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <FileType size={17} className={isExporting ? 'animate-pulse' : ''} />
+        </button>
+        <button
+          onClick={onExportHtml}
+          disabled={isExportingHtml}
+          title="导出 HTML (Ctrl+Shift+H)"
+          className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-sm text-gray-600 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <FileCode size={17} className={isExportingHtml ? 'animate-pulse' : ''} />
+        </button>
+        <button
+          onClick={onExportWord}
+          disabled={isExportingWord}
+          title="导出 Word (Ctrl+Shift+E)"
+          className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-sm text-gray-600 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <FileType2 size={17} className={isExportingWord ? 'animate-pulse' : ''} />
         </button>
 
         {/* Divider */}

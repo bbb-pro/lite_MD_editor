@@ -16,12 +16,17 @@ if (isElectron) {
     // PDF export
     exportPDF: (data) => ipcRenderer.invoke('export:pdf', data),
 
+    // Generic document export (HTML / Word)
+    exportDocument: (data) => ipcRenderer.invoke('export:document', data),
+
     // Menu events
     onMenuNew: (callback) => ipcRenderer.on('menu:new', callback),
     onMenuOpen: (callback) => ipcRenderer.on('menu:open', callback),
     onMenuSave: (callback) => ipcRenderer.on('menu:save', callback),
     onMenuSaveAs: (callback) => ipcRenderer.on('menu:saveAs', callback),
     onMenuExportPDF: (callback) => ipcRenderer.on('menu:exportPDF', callback),
+    onMenuExportHtml: (callback) => ipcRenderer.on('menu:exportHtml', callback),
+    onMenuExportWord: (callback) => ipcRenderer.on('menu:exportWord', callback),
   });
 } else {
   // Non-Electron fallback (web browser)

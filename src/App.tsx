@@ -14,6 +14,16 @@ import StatusBar from './components/StatusBar';
 import { useFileSystem, isAcceptedFileName } from './hooks/useFileSystem';
 import type { EditorMode, FileState } from './types';
 import { countStats, WELCOME_CONTENT } from './utils/markdown';
+import { exportHtml, exportWord, stripMarkdownExtension } from './utils/export';
+
+/** Document formats supported by the preview-based exporter. */
+type ExportKind = 'html' | 'word';
+
+/** Human-readable labels for alert messages. */
+const EXPORT_LABELS: Record<ExportKind, string> = {
+  html: 'HTML',
+  word: 'Word',
+};
 
 function App() {
   const [fileState, setFileState] = useState<FileState>({
@@ -25,9 +35,17 @@ function App() {
   const [mode, setMode] = useState<EditorMode>('split');
   const [isSaving, setIsSaving] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [isExportingHtml, setIsExportingHtml] = useState(false);
+  const [isExportingWord, setIsExportingWord] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  /**
+   * Re-entrancy guard for document exports. Electron menu accelerators and the
+   * renderer keydown listener can both fire for the same shortcut, which would
+   * otherwise open two save dialogs.
+   */
+  const exportBusyRef = useRef(false);
   /**
    * Depth counter for drag enter/leave events. `dragleave` fires whenever the
    * pointer crosses into a child element, so a plain boolean would flicker.
@@ -229,6 +247,69 @@ function App() {
     }
   }, [mode, fileState.name]);
 
+  /* ---------- Export HTML / Word ---------- */
+
+  /**
+   * Grab the rendered preview HTML and hand it to the requested exporter.
+   *
+   * The preview is only mounted in `preview` / `split` mode, so we temporarily
+   * force `preview` mode (full width, complete content), wait for React to
+   * commit, capture `innerHTML`, then restore the previous mode.
+   */
+  const runDocumentExport = useCallback(
+    async (kind: ExportKind) => {
+      if (exportBusyRef.current) return;
+      exportBusyRef.current = true;
+
+      const setBusy = kind === 'html' ? setIsExportingHtml : setIsExportingWord;
+      const label = EXPORT_LABELS[kind];
+      setBusy(true);
+
+      const prevMode = mode;
+      setMode('preview');
+
+      try {
+        // Wait for React to render the preview at full width.
+        await new Promise((r) => setTimeout(r, 250));
+
+        const container = document.querySelector('.markdown-preview');
+        const previewHtml = container ? container.innerHTML : '';
+        if (!previewHtml.trim()) {
+          window.alert('预览内容为空，无法导出。');
+          return;
+        }
+
+        const baseName = stripMarkdownExtension(fileState.name);
+        const result =
+          kind === 'html'
+            ? await exportHtml(previewHtml, baseName)
+            : await exportWord(previewHtml, baseName);
+
+        if (!result.success && !result.cancelled) {
+          window.alert(`导出 ${label} 失败: ${result.error || '未知错误'}`);
+        }
+      } catch (err) {
+        console.error(`导出 ${label} 失败:`, err);
+        window.alert(`导出 ${label} 失败，请重试。`);
+      } finally {
+        setMode(prevMode);
+        setBusy(false);
+        exportBusyRef.current = false;
+      }
+    },
+    [mode, fileState.name]
+  );
+
+  const handleExportHtml = useCallback(
+    () => runDocumentExport('html'),
+    [runDocumentExport]
+  );
+
+  const handleExportWord = useCallback(
+    () => runDocumentExport('word'),
+    [runDocumentExport]
+  );
+
   /* ---------- Keyboard shortcuts ---------- */
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -247,15 +328,35 @@ function App() {
       } else if (isMod && (e.key === 'o' || e.key === 'O')) {
         e.preventDefault();
         handleOpen();
+      } else if (isMod && e.shiftKey && (e.key === 'h' || e.key === 'H')) {
+        e.preventDefault();
+        handleExportHtml();
+      } else if (isMod && e.shiftKey && (e.key === 'w' || e.key === 'W')) {
+        // Note: browsers may reserve Ctrl+Shift+W (close window); Ctrl+Shift+E
+        // is the reliable alternative and is handled below.
+        e.preventDefault();
+        handleExportWord();
       } else if (isMod && (e.key === 'e' || e.key === 'E')) {
         e.preventDefault();
-        handleExportPDF();
+        if (e.shiftKey) {
+          handleExportWord();
+        } else {
+          handleExportPDF();
+        }
       }
     };
 
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [handleSave, handleSaveAs, handleNew, handleOpen, handleExportPDF]);
+  }, [
+    handleSave,
+    handleSaveAs,
+    handleNew,
+    handleOpen,
+    handleExportPDF,
+    handleExportHtml,
+    handleExportWord,
+  ]);
 
   /* ---------- Warn before closing with unsaved changes ---------- */
   useEffect(() => {
@@ -279,13 +380,23 @@ function App() {
     const offSave = electronAPI.onMenuSave(() => handleSave());
     const offSaveAs = electronAPI.onMenuSaveAs(() => handleSaveAs());
     const offExportPDF = electronAPI.onMenuExportPDF(() => handleExportPDF());
+    electronAPI.onMenuExportHtml?.(() => handleExportHtml());
+    electronAPI.onMenuExportWord?.(() => handleExportWord());
 
     return () => {
       // ipcRenderer.on returns a cleanup function in newer Electron,
       // but our preload doesn't return disposers — just leave listeners.
       // They'll be cleaned up when the window is destroyed.
     };
-  }, [handleNew, handleOpen, handleSave, handleSaveAs, handleExportPDF]);
+  }, [
+    handleNew,
+    handleOpen,
+    handleSave,
+    handleSaveAs,
+    handleExportPDF,
+    handleExportHtml,
+    handleExportWord,
+  ]);
 
   /* ---------- Render ---------- */
   const showEditor = mode === 'edit' || mode === 'split';
@@ -304,11 +415,15 @@ function App() {
         isDirty={fileState.isDirty}
         isSaving={isSaving}
         isExporting={isExporting}
+        isExportingHtml={isExportingHtml}
+        isExportingWord={isExportingWord}
         onNew={handleNew}
         onOpen={handleOpen}
         onSave={handleSave}
         onSaveAs={handleSaveAs}
         onExportPDF={handleExportPDF}
+        onExportHtml={handleExportHtml}
+        onExportWord={handleExportWord}
         mode={mode}
         onModeChange={setMode}
       />

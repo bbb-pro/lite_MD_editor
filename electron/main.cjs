@@ -71,6 +71,16 @@ function buildMenuTemplate() {
           accelerator: 'CmdOrCtrl+E',
           click: () => mainWindow?.webContents.send('menu:exportPDF'),
         },
+        {
+          label: '导出 HTML...',
+          accelerator: 'CmdOrCtrl+Shift+H',
+          click: () => mainWindow?.webContents.send('menu:exportHtml'),
+        },
+        {
+          label: '导出 Word...',
+          accelerator: 'CmdOrCtrl+Shift+E',
+          click: () => mainWindow?.webContents.send('menu:exportWord'),
+        },
         { type: 'separator' },
         isMac ? { role: 'close' } : { role: 'quit' },
       ],
@@ -179,6 +189,35 @@ ipcMain.handle('export:pdf', async (event, { defaultName }) => {
 
     fs.writeFileSync(result.filePath, pdfBuffer);
     return { success: true, path: result.filePath };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+/* ---------- IPC: Export generic document (HTML / Word) ---------- */
+ipcMain.handle('export:document', async (event, { content, defaultName, filters }) => {
+  if (!mainWindow) return { success: false, error: 'No window' };
+
+  try {
+    const result = await dialog.showSaveDialog(mainWindow, {
+      title: '导出文件',
+      defaultPath: defaultName || 'export.html',
+      filters:
+        Array.isArray(filters) && filters.length > 0
+          ? filters
+          : [{ name: '所有文件', extensions: ['*'] }],
+    });
+
+    if (result.canceled || !result.filePath) {
+      return { success: false, cancelled: true };
+    }
+
+    fs.writeFileSync(result.filePath, content, 'utf-8');
+    return {
+      success: true,
+      path: result.filePath,
+      name: path.basename(result.filePath),
+    };
   } catch (err) {
     return { success: false, error: err.message };
   }
