@@ -1,4 +1,4 @@
-# Lite MD Editor
+# Lite online Markdown Editor
 
 **[简体中文](#简体中文)** | **[English](#english)**
 
@@ -98,7 +98,7 @@ npm run preview
 
 ### 📦 Deployment
 
-Live URL: 'https://057300.xyz/lite_MD_editor/'
+Live URL: 'https://bbb-pro.github.io/lite_MD_editor/'
 
 ### 📄 License
 
