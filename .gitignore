@@ -31,8 +31,12 @@ pnpm-debug.log*
 
 # Electron build output
 release/
+release-qa/
 
 # Misc
 .cache/
 .temp/
 *.timestamp-*.mjs
+
+# QA test build artifacts
+qa-tests/.build/

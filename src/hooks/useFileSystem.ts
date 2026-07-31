@@ -16,11 +16,31 @@ const MD_FILE_TYPES = [
   },
 ];
 
+/** Extensions accepted when opening a file (picker or drag-and-drop). */
+export const ACCEPTED_EXTENSIONS_RE = /\.(md|markdown|txt)$/i;
+
+/** Whether the given file name has an accepted Markdown/text extension. */
+export function isAcceptedFileName(name: string): boolean {
+  return ACCEPTED_EXTENSIONS_RE.test(name);
+}
+
 export interface UseFileSystemReturn {
   /** Whether the File System Access API is available in this browser. */
   isSupported: boolean;
   /** Open a file picker and read the selected file. Returns null if cancelled. */
   openFile: () => Promise<OpenFileResult | null>;
+  /**
+   * Read the first accepted Markdown/text file from a drag-and-drop payload.
+   *
+   * Works identically in the browser and in Electron because both deliver
+   * standard `File` objects through `DataTransfer.files`. No File System
+   * Access handle can be derived from a dropped file, so `handle` is always
+   * null — the first save will therefore fall back to "save as".
+   *
+   * @param files Files coming from `event.dataTransfer.files`.
+   * @returns The parsed file, or null when nothing matched / read failed.
+   */
+  openFileFromDrop: (files: FileList | File[]) => Promise<OpenFileResult | null>;
   /**
    * Save content to disk.
    * - If a file handle exists, write directly to it.
@@ -96,6 +116,24 @@ export function useFileSystem(): UseFileSystemReturn {
       input.click();
     });
   }, []);
+
+  const openFileFromDrop = useCallback(
+    async (files: FileList | File[]): Promise<OpenFileResult | null> => {
+      const list: File[] = Array.from(files ?? []);
+      const target = list.find((file) => isAcceptedFileName(file.name));
+      if (!target) return null;
+
+      try {
+        const content = await target.text();
+        // Dropped files never carry a File System Access handle.
+        return { name: target.name, content, handle: null };
+      } catch (err) {
+        console.error('读取拖入的文件失败:', err);
+        return null;
+      }
+    },
+    []
+  );
 
   const _downloadFile = (content: string, name: string): void => {
     const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
@@ -184,5 +222,5 @@ export function useFileSystem(): UseFileSystemReturn {
     [saveFileAs]
   );
 
-  return { isSupported, openFile, saveFile, saveFileAs };
+  return { isSupported, openFile, openFileFromDrop, saveFile, saveFileAs };
 }

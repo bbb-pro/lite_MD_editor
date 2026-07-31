@@ -11,7 +11,7 @@ import Toolbar from './components/Toolbar';
 import Editor from './components/Editor';
 import Preview from './components/Preview';
 import StatusBar from './components/StatusBar';
-import { useFileSystem } from './hooks/useFileSystem';
+import { useFileSystem, isAcceptedFileName } from './hooks/useFileSystem';
 import type { EditorMode, FileState } from './types';
 import { countStats, WELCOME_CONTENT } from './utils/markdown';
 
@@ -25,9 +25,16 @@ function App() {
   const [mode, setMode] = useState<EditorMode>('split');
   const [isSaving, setIsSaving] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const { openFile, saveFile, saveFileAs, isSupported } = useFileSystem();
+  /**
+   * Depth counter for drag enter/leave events. `dragleave` fires whenever the
+   * pointer crosses into a child element, so a plain boolean would flicker.
+   */
+  const dragDepthRef = useRef(0);
+  const { openFile, openFileFromDrop, saveFile, saveFileAs, isSupported } =
+    useFileSystem();
 
   const stats = countStats(fileState.content);
 
@@ -67,6 +74,83 @@ function App() {
       });
     }
   }, [fileState.isDirty, openFile]);
+
+  /* ---------- Drag & drop to open ---------- */
+
+  /**
+   * Must call preventDefault on dragover, otherwise the drop event never
+   * fires and Electron falls back to opening the file with an external app.
+   */
+  const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'copy';
+    }
+  }, []);
+
+  const handleDragEnter = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const types = e.dataTransfer?.types;
+    const hasFiles = !!types && Array.from(types).includes('Files');
+    if (!hasFiles) return;
+    dragDepthRef.current += 1;
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    if (dragDepthRef.current > 0) {
+      dragDepthRef.current -= 1;
+    }
+    // Only hide the overlay once the pointer has truly left the app container.
+    const related = e.relatedTarget as Node | null;
+    const stillInside = !!related && e.currentTarget.contains(related);
+    if (dragDepthRef.current === 0 || !stillInside) {
+      dragDepthRef.current = 0;
+      setIsDragging(false);
+    }
+  }, []);
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      dragDepthRef.current = 0;
+      setIsDragging(false);
+
+      // Snapshot the files synchronously — `dataTransfer` is not reliable
+      // after the handler returns / awaits.
+      const dropped: File[] = Array.from(e.dataTransfer?.files ?? []);
+      if (dropped.length === 0) return;
+
+      const target = dropped.find((file) => isAcceptedFileName(file.name));
+      if (!target) {
+        window.alert('只支持打开 .md / .markdown / .txt 文件');
+        return;
+      }
+
+      if (fileState.isDirty) {
+        const confirmed = window.confirm(
+          '当前文件有未保存的更改，确定要打开拖入的文件吗？'
+        );
+        if (!confirmed) return;
+      }
+
+      void (async () => {
+        const result = await openFileFromDrop(dropped);
+        if (!result) {
+          window.alert('读取文件失败，请重试。');
+          return;
+        }
+        setFileState({
+          name: result.name,
+          content: result.content,
+          isDirty: false,
+          fileHandle: result.handle,
+        });
+      })();
+    },
+    [fileState.isDirty, openFileFromDrop]
+  );
 
   /* ---------- Save ---------- */
   const handleSave = useCallback(async () => {
@@ -208,7 +292,13 @@ function App() {
   const showPreview = mode === 'preview' || mode === 'split';
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
+    <div
+      className="flex flex-col h-screen bg-gray-50"
+      onDragEnter={handleDragEnter}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
       <TitleBar
         fileName={fileState.name}
         isDirty={fileState.isDirty}
@@ -259,6 +349,15 @@ function App() {
         stats={stats}
         mode={mode}
       />
+      {isDragging && (
+        // pointer-events-none lets the drag events keep bubbling to the root
+        // container, so the overlay never swallows dragleave / drop.
+        <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center border-4 border-dashed border-blue-400 bg-blue-500/10">
+          <div className="rounded-lg bg-white/90 px-6 py-4 text-lg font-medium text-blue-600 shadow-lg">
+            松开以打开文件（.md / .markdown / .txt）
+          </div>
+        </div>
+      )}
       {!isSupported && (
         <div className="px-4 py-1 bg-yellow-50 border-t border-yellow-200 text-xs text-yellow-700 text-center">
           当前浏览器不支持 File System Access API，文件操作将通过下载/上传方式进行。推荐使用 Chrome 或 Edge 浏览器。
