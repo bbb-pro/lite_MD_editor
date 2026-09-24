@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+
+# 本文件位于 /lite_MD_editor/ 子目录。搜索引擎只读取域名根目录的
+# https://057300.xyz/robots.txt，本文件仅作声明用途。
+Sitemap: https://057300.xyz/lite_MD_editor/sitemap.xml
