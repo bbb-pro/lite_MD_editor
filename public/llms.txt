@@ -1,0 +1,26 @@
+# Lite MD Editor
+
+> 轻量级、纯本地、免登录的 Markdown 编辑器。本页是 057300.xyz 站点体系的一部分，接入根站全站 GEO 配置，此处仅做页面级补充，不重复造。
+
+## 概述
+Lite MD Editor 是一款专注于 Markdown 写作的轻量编辑器，提供实时预览、常用语法一键插入，以及导出 PDF / Word / HTML 能力。纯本地运行，无需账号与联网。
+
+## 核心特性
+- 实时预览：左编辑右渲染，所见即所得
+- 语法一键插入：标题、列表、表格、代码块、引用等
+- 多格式导出：PDF、Word（.doc）、HTML
+- 纯本地运行：免登录、免联网
+- 拖拽打开：支持 .md / .markdown / .txt 拖入窗口
+- 双端可用：网页版 + Windows 桌面版（EXE）
+
+## 下载
+- GitHub Release: https://github.com/bbb-pro/lite_MD_editor
+
+## 接入根站体系（全站级配置在根站，本页不重复造）
+- 全站 llms.txt: https://057300.xyz/llms.txt
+- 站点关于页: https://057300.xyz/about/
+- 更新订阅源 (Atom): https://057300.xyz/atom.xml
+- AI 发现端点: https://057300.xyz/ai/
+
+## 版本
+当前版本 1.0.1（2026-10-29）
