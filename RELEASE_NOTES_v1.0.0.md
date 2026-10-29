@@ -53,7 +53,7 @@ npm run dev               # Web 开发模式
 
 ## 🌐 在线使用
 
-访问：https://bbb-pro.github.io/lite_MD_editor/
+访问：https://057300.xyz/lite_MD_editor/
 
 ## 📄 License
 
