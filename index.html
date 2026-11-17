@@ -132,6 +132,30 @@
         ]
       }
     </script>
+
+    <!-- 51.la 访问统计：采用条件注入而非静态两行，原因有两点：
+         (1) Electron 桌面版是纯本地离线应用（核心需求"无登录、无联网"），不应联网做统计；
+         (2) 脚本 src 为协议相对 URL //sdk.51.la/...，在 Electron 的 file:// 协议下会被
+             解析成 file://sdk.51.la/... 导致加载失败并在控制台报错。
+         因此这里判断：file: 协议或存在 electronAPI.isElectron 时直接跳过；否则动态加载 SDK，
+         onload 后再调用 LA.init（id/ck/autoTrack 保持 51.la 官方原样）。 -->
+    <script>
+      (function () {
+        if (window.location.protocol === 'file:' || (window.electronAPI && window.electronAPI.isElectron)) {
+          return;
+        }
+        var collector = document.createElement('script');
+        collector.charset = 'UTF-8';
+        collector.id = 'LA_COLLECT';
+        collector.src = '//sdk.51.la/js-sdk-pro.min.js';
+        collector.onload = function () {
+          if (window.LA && typeof window.LA.init === 'function') {
+            window.LA.init({ id: '3RqyAkBd97JuF84j', ck: '3RqyAkBd97JuF84j', autoTrack: true });
+          }
+        };
+        document.head.appendChild(collector);
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
